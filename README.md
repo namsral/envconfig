@@ -1,24 +1,22 @@
 # envconfig
 
-[![Build Status](https://travis-ci.org/kelseyhightower/envconfig.png)](https://travis-ci.org/kelseyhightower/envconfig)
-
 ```Go
-import "github.com/kelseyhightower/envconfig"
+import "github.com/namsral/envconfig"
 ```
 
 ## Documentation
 
-See [godoc](http://godoc.org/github.com/kelseyhightower/envconfig)
+See [godoc](http://godoc.org/github.com/namsral/envconfig)
 
 ## Usage
 
 Set some environment variables:
 
 ```Bash
-export MYAPP_DEBUG=false
-export MYAPP_PORT=8080
-export MYAPP_USER=Kelsey
-export MYAPP_RATE="0.5"
+export DEBUG=false
+export PORT=8080
+export USER=Kelsey
+export RATE="0.5"
 ```
 
 Write some code:
@@ -30,7 +28,7 @@ import (
     "fmt"
     "log"
 
-    "github.com/kelseyhightower/envconfig"
+    "github.com/namsral/envconfig"
 )
 
 type Specification struct {
@@ -42,7 +40,7 @@ type Specification struct {
 
 func main() {
     var s Specification
-    err := envconfig.Process("myapp", &s)
+    err := envconfig.Process(&s)
     if err != nil {
         log.Fatal(err.Error())
     }
@@ -72,16 +70,29 @@ For example, consider the following struct:
 
 ```Go
 type Specification struct {
-    MultiWordVar `envconfig:"multi_word_var"`
+    MultiWordVar string `envconfig:"multi_word_var"`
 }
 ```
 
 Whereas before, the value for `MultiWordVar` would have been populated
-with `MYAPP_MULTIWORDVAR`, it will now be populated with
-`MYAPP_MULTI_WORD_VAR`.
+with `MULTIWORDVAR`, it will now be populated with
+`MULTI_WORD_VAR`.
 
 ```Bash
-export MYAPP_MULTI_WORD_VAR="this will be the value"
+export MULTI_WORD_VAR="this will be the value"
 
-# export MYAPP_MULTIWORDVAR="and this will not"
+# export MULTIWORDVAR="and this will not"
+```
+
+## Mandatory vs Optional Fields
+
+Specification fields are mandatory by default. To make a field optional add the struct tag option `optional`.
+
+For example, the field `Password` in the following struct is optional:
+
+```Go
+type Specification struct {
+    User string
+    Password string `envconfig:",optional"`
+}
 ```

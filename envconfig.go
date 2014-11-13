@@ -29,7 +29,16 @@ func (e *ParseError) Error() string {
 	return fmt.Sprintf("envconfig.Process: assigning %[1]s to %[2]s: converting '%[3]s' to type %[4]s", e.KeyName, e.FieldName, e.Value, e.TypeName)
 }
 
-func Process(prefix string, spec interface{}) error {
+type EmptyMandatoryFieldError struct {
+	KeyName   string
+	FieldName string
+}
+
+func (e *EmptyMandatoryFieldError) Error() string {
+	return fmt.Sprintf("envconfig.Process: environment variable %s must be set for mandatory field %s", e.KeyName, e.FieldName)
+}
+
+func Process(spec interface{}) error {
 	s := reflect.ValueOf(spec).Elem()
 	if s.Kind() != reflect.Struct {
 		return ErrInvalidSpecification
@@ -39,15 +48,26 @@ func Process(prefix string, spec interface{}) error {
 		f := s.Field(i)
 		if f.CanSet() {
 			var fieldName string
-			alt := typeOfSpec.Field(i).Tag.Get("envconfig")
+			var optional bool
+			alt := typeOfSpec.Field(i).Tag.Get("env")
+			if strings.HasSuffix(alt, ",optional") {
+				alt = strings.TrimSuffix(alt, ",optional")
+				optional = true
+			}
 			if alt != "" {
 				fieldName = alt
 			} else {
 				fieldName = typeOfSpec.Field(i).Name
 			}
-			key := strings.ToUpper(fmt.Sprintf("%s_%s", prefix, fieldName))
+			key := strings.ToUpper(fieldName)
 			value := os.Getenv(key)
-			if value == "" {
+			if value == "" && !optional {
+				return &EmptyMandatoryFieldError{
+					KeyName:   key,
+					FieldName: fieldName,
+				}
+			}
+			if value == "" && optional {
 				continue
 			}
 			switch f.Kind() {

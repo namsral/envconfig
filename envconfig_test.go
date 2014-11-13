@@ -10,23 +10,23 @@ import (
 )
 
 type Specification struct {
-	Debug                        bool
-	Port                         int
-	Rate                         float32
-	User                         string
-	MultiWordVar                 string
-	MultiWordVarWithAlt          string `envconfig:"MULTI_WORD_VAR_WITH_ALT"`
-	MultiWordVarWithLowerCaseAlt string `envconfig:"multi_word_var_with_lower_case_alt"`
+	Debug                        bool    `env:",optional"`
+	Port                         int     `env:",optional"`
+	Rate                         float32 `env:",optional"`
+	User                         string  `env:",optional"`
+	MultiWordVar                 string  `env:",optional"`
+	MultiWordVarWithAlt          string  `env:"MULTI_WORD_VAR_WITH_ALT,optional"`
+	MultiWordVarWithLowerCaseAlt string  `env:"multi_word_var_with_lower_case_alt,optional"`
 }
 
 func TestProcess(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_DEBUG", "true")
-	os.Setenv("ENV_CONFIG_PORT", "8080")
-	os.Setenv("ENV_CONFIG_RATE", "0.5")
-	os.Setenv("ENV_CONFIG_USER", "Kelsey")
-	err := Process("env_config", &s)
+	os.Setenv("DEBUG", "true")
+	os.Setenv("PORT", "8080")
+	os.Setenv("RATE", "0.5")
+	os.Setenv("USER", "Kelsey")
+	err := Process(&s)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -47,8 +47,8 @@ func TestProcess(t *testing.T) {
 func TestParseErrorBool(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_DEBUG", "string")
-	err := Process("env_config", &s)
+	os.Setenv("DEBUG", "string")
+	err := Process(&s)
 	v, ok := err.(*ParseError)
 	if !ok {
 		t.Errorf("expected ParseError, got %v", v)
@@ -64,8 +64,8 @@ func TestParseErrorBool(t *testing.T) {
 func TestParseErrorFloat32(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_RATE", "string")
-	err := Process("env_config", &s)
+	os.Setenv("RATE", "string")
+	err := Process(&s)
 	v, ok := err.(*ParseError)
 	if !ok {
 		t.Errorf("expected ParseError, got %v", v)
@@ -81,8 +81,8 @@ func TestParseErrorFloat32(t *testing.T) {
 func TestParseErrorInt(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_PORT", "string")
-	err := Process("env_config", &s)
+	os.Setenv("PORT", "string")
+	err := Process(&s)
 	v, ok := err.(*ParseError)
 	if !ok {
 		t.Errorf("expected ParseError, got %v", v)
@@ -97,7 +97,7 @@ func TestParseErrorInt(t *testing.T) {
 
 func TestErrInvalidSpecification(t *testing.T) {
 	m := make(map[string]string)
-	err := Process("env_config", &m)
+	err := Process(&m)
 	if err != ErrInvalidSpecification {
 		t.Errorf("expected %v, got %v", ErrInvalidSpecification, err)
 	}
@@ -106,10 +106,10 @@ func TestErrInvalidSpecification(t *testing.T) {
 func TestAlternateVarNames(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_MULTI_WORD_VAR", "foo")
-	os.Setenv("ENV_CONFIG_MULTI_WORD_VAR_WITH_ALT", "bar")
-	os.Setenv("ENV_CONFIG_MULTI_WORD_VAR_WITH_LOWER_CASE_ALT", "baz")
-	if err := Process("env_config", &s); err != nil {
+	os.Setenv("MULTI_WORD_VAR", "foo")
+	os.Setenv("MULTI_WORD_VAR_WITH_ALT", "bar")
+	os.Setenv("MULTI_WORD_VAR_WITH_LOWER_CASE_ALT", "baz")
+	if err := Process(&s); err != nil {
 		t.Error(err.Error())
 	}
 
@@ -128,5 +128,19 @@ func TestAlternateVarNames(t *testing.T) {
 	// Alt value is not case sensitive and is treated as all uppercase
 	if s.MultiWordVarWithLowerCaseAlt != "baz" {
 		t.Errorf("expected %q, got %q", "baz", s.MultiWordVarWithLowerCaseAlt)
+	}
+}
+
+func TestMandatory(t *testing.T) {
+	type Spec struct {
+		Mandatory string `env:"MANDATORY"`
+	}
+	var s Spec
+	os.Clearenv()
+	os.Setenv("MANDATORY", "")
+
+	err := Process(&s)
+	if _, ok := err.(*EmptyMandatoryFieldError); !ok {
+		t.Errorf("expected EmptyMandatoryFieldError, got %#v", err)
 	}
 }
