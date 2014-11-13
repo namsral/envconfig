@@ -70,7 +70,7 @@ For example, consider the following struct:
 
 ```Go
 type Specification struct {
-    MultiWordVar string `envconfig:"multi_word_var"`
+    MultiWordVar string `env:"multi_word_var"`
 }
 ```
 
@@ -93,6 +93,6 @@ For example, the field `Password` in the following struct is optional:
 ```Go
 type Specification struct {
     User string
-    Password string `envconfig:",optional"`
+    Password string `env:",optional"`
 }
 ```
